@@ -2,88 +2,167 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import os
+
+# ==========================================
+# PAGE CONFIG
+# ==========================================
 
 st.set_page_config(
     page_title="Maini Renewables Dashboard",
     layout="wide"
 )
 
-st.title("⚡ Maini Renewables Monitoring Dashboard")
+st.title("⚡ Maini Renewables Renewable Energy Dashboard")
 
-# Load Data
-df = pd.read_csv("turbine_data.csv")
+# ==========================================
+# LOAD DATA SAFELY
+# ==========================================
 
-# Latest Reading
+DATA_FILE = "turbine_data.csv"
+SAMPLE_FILE = "sample_data.csv"
+
+if os.path.exists(DATA_FILE):
+    df = pd.read_csv(DATA_FILE)
+
+elif os.path.exists(SAMPLE_FILE):
+    st.warning("Using sample_data.csv")
+    df = pd.read_csv(SAMPLE_FILE)
+
+else:
+    st.error(
+        """
+        No data file found.
+
+        Create:
+        turbine_data.csv
+
+        OR
+
+        sample_data.csv
+        """
+    )
+    st.stop()
+
+# ==========================================
+# VALIDATE COLUMNS
+# ==========================================
+
+required_columns = [
+    "wind_speed",
+    "wind_direction",
+    "rpm",
+    "voltage",
+    "current",
+    "power",
+    "temperature",
+    "vibration",
+    "status"
+]
+
+missing_columns = [
+    col for col in required_columns
+    if col not in df.columns
+]
+
+if missing_columns:
+    st.error(
+        f"Missing columns: {missing_columns}"
+    )
+
+    st.write("Columns found:")
+
+    st.write(df.columns.tolist())
+
+    st.stop()
+
+# ==========================================
+# GET LATEST ROW
+# ==========================================
+
 latest = df.iloc[-1]
 
-# =========================
-# KPI SECTION
-# =========================
+# ==========================================
+# ENERGY CALCULATIONS
+# ==========================================
+
+df["energy_wh"] = df["power"] / 3600
+
+total_energy = df["energy_wh"].sum()
+
+# ==========================================
+# KPI ROW 1
+# ==========================================
 
 st.subheader("Live Turbine Status")
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
-col1.metric(
-    "Wind Speed",
-    f"{latest['wind_speed']:.2f} m/s"
-)
+with col1:
+    st.metric(
+        "Wind Speed",
+        f"{latest['wind_speed']:.2f} m/s"
+    )
 
-col2.metric(
-    "RPM",
-    f"{latest['rpm']:.2f}"
-)
+with col2:
+    st.metric(
+        "RPM",
+        f"{latest['rpm']:.0f}"
+    )
 
-col3.metric(
-    "Power",
-    f"{latest['power']:.2f} W"
-)
+with col3:
+    st.metric(
+        "Power",
+        f"{latest['power']:.2f} W"
+    )
 
-col4.metric(
-    "Temperature",
-    f"{latest['temperature']:.2f} °C"
-)
+with col4:
+    st.metric(
+        "Temperature",
+        f"{latest['temperature']:.2f} °C"
+    )
 
-col5.metric(
-    "Vibration",
-    f"{latest['vibration']:.2f} g"
-)
+with col5:
+    st.metric(
+        "Vibration",
+        f"{latest['vibration']:.2f} g"
+    )
 
-st.divider()
+# ==========================================
+# KPI ROW 2
+# ==========================================
 
-# =========================
-# SECOND KPI ROW
-# =========================
+st.subheader("Electrical Parameters")
 
 col6, col7, col8, col9 = st.columns(4)
 
-col6.metric(
-    "Voltage",
-    f"{latest['voltage']:.2f} V"
-)
+with col6:
+    st.metric(
+        "Voltage",
+        f"{latest['voltage']:.2f} V"
+    )
 
-col7.metric(
-    "Current",
-    f"{latest['current']:.2f} A"
-)
+with col7:
+    st.metric(
+        "Current",
+        f"{latest['current']:.2f} A"
+    )
 
-col8.metric(
-    "Wind Direction",
-    f"{latest['wind_direction']}°"
-)
+with col8:
+    st.metric(
+        "Wind Direction",
+        f"{latest['wind_direction']}°"
+    )
 
-col9.metric(
-    "Status",
-    latest['status']
-)
+with col9:
+    st.metric(
+        "Status",
+        latest["status"]
+    )
 
-# =========================
-# ENERGY CALCULATION
-# =========================
-
-df["energy_wh"] = df["power"] / 3600
-
-total_energy = df["energy_wh"].sum()
+# ==========================================
+# ENERGY CARD
+# ==========================================
 
 st.success(
     f"Total Energy Generated: {total_energy:.2f} Wh"
@@ -91,9 +170,9 @@ st.success(
 
 st.divider()
 
-# =========================
+# ==========================================
 # GAUGES
-# =========================
+# ==========================================
 
 st.subheader("Live Gauges")
 
@@ -101,48 +180,69 @@ g1, g2, g3 = st.columns(3)
 
 with g1:
 
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=latest["wind_speed"],
-        title={"text": "Wind Speed"},
-        gauge={
-            "axis": {"range": [0, 20]}
-        }
-    ))
+    fig = go.Figure(
+        go.Indicator(
+            mode="gauge+number",
+            value=latest["wind_speed"],
+            title={"text": "Wind Speed"},
+            gauge={
+                "axis": {
+                    "range": [0, 20]
+                }
+            }
+        )
+    )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
 
 with g2:
 
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=latest["rpm"],
-        title={"text": "RPM"},
-        gauge={
-            "axis": {"range": [0, 300]}
-        }
-    ))
+    fig = go.Figure(
+        go.Indicator(
+            mode="gauge+number",
+            value=latest["rpm"],
+            title={"text": "RPM"},
+            gauge={
+                "axis": {
+                    "range": [0, 300]
+                }
+            }
+        )
+    )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
 
 with g3:
 
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=latest["power"],
-        title={"text": "Power Output"},
-        gauge={
-            "axis": {"range": [0, 2000]}
-        }
-    ))
+    fig = go.Figure(
+        go.Indicator(
+            mode="gauge+number",
+            value=latest["power"],
+            title={"text": "Power Output"},
+            gauge={
+                "axis": {
+                    "range": [0, 2000]
+                }
+            }
+        )
+    )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
 
 st.divider()
 
-# =========================
+# ==========================================
 # WIND SPEED TREND
-# =========================
+# ==========================================
 
 st.subheader("Wind Speed Trend")
 
@@ -157,9 +257,9 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# =========================
+# ==========================================
 # POWER TREND
-# =========================
+# ==========================================
 
 st.subheader("Power Output Trend")
 
@@ -174,9 +274,9 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# =========================
+# ==========================================
 # POWER CURVE
-# =========================
+# ==========================================
 
 st.subheader("Power Curve")
 
@@ -192,9 +292,9 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# =========================
+# ==========================================
 # TEMPERATURE TREND
-# =========================
+# ==========================================
 
 st.subheader("Temperature Trend")
 
@@ -209,9 +309,9 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# =========================
+# ==========================================
 # VIBRATION TREND
-# =========================
+# ==========================================
 
 st.subheader("Vibration Trend")
 
@@ -226,31 +326,39 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# =========================
-# ALARMS
-# =========================
+# ==========================================
+# ALARM SYSTEM
+# ==========================================
 
 st.subheader("Alarm Monitoring")
 
 if latest["temperature"] > 45:
-    st.error("⚠ High Generator Temperature")
+    st.error(
+        "⚠ High Generator Temperature"
+    )
 
 if latest["vibration"] > 2.5:
-    st.warning("⚠ High Vibration Detected")
+    st.warning(
+        "⚠ High Vibration Detected"
+    )
 
 if latest["wind_speed"] > 15:
-    st.warning("⚠ High Wind Speed")
+    st.warning(
+        "⚠ High Wind Speed"
+    )
 
 if (
     latest["temperature"] <= 45
     and latest["vibration"] <= 2.5
     and latest["wind_speed"] <= 15
 ):
-    st.success("✅ System Operating Normally")
+    st.success(
+        "✅ System Operating Normally"
+    )
 
-# =========================
+# ==========================================
 # RAW DATA
-# =========================
+# ==========================================
 
 st.subheader("Recent Data")
 
