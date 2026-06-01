@@ -1,0 +1,15 @@
+pandas
+numpy
+matplotlib
+plotly
+streamlit
+sqlalchemy
+psycopg2-binary
+influxdb-client
+pymodbus
+pyserial
+paho-mqtt
+scikit-learn
+xgboost
+joblib
+jupyter
