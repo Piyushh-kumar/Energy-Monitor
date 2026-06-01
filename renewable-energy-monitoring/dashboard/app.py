@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import os
+from pathlib import path
+
 
 # ==========================================
 # PAGE CONFIG
@@ -19,27 +20,30 @@ st.title("⚡ Maini Renewables Renewable Energy Dashboard")
 # LOAD DATA SAFELY
 # ==========================================
 
-DATA_FILE = "turbine_data.csv"
-SAMPLE_FILE = "sample_data.csv"
 
-if os.path.exists(DATA_FILE):
-    df = pd.read_csv(DATA_FILE)
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-elif os.path.exists(SAMPLE_FILE):
-    st.warning("Using sample_data.csv")
-    df = pd.read_csv(SAMPLE_FILE)
+data_file = BASE_DIR / "turbine_data.csv"
+sample_file = BASE_DIR / "sample_data.csv"
+
+if data_file.exists():
+    df = pd.read_csv(data_file)
+
+elif sample_file.exists():
+    st.info("Using sample data")
+    df = pd.read_csv(sample_file)
 
 else:
     st.error(
-        """
-        No data file found.
+        f"""
+        No data files found.
 
-        Create:
-        turbine_data.csv
+        Expected:
+        {data_file}
 
         OR
 
-        sample_data.csv
+        {sample_file}
         """
     )
     st.stop()
